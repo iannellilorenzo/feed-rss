@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Feed RSS - Gazzetta</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <h1 id="titolo"></h1>
+      <h3 id="url"></h3>
+    </div>
+    <div class="container">
+      <div id="description"></div>
+      <div id="news"></div>
+    </div>
+
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+    <script src="js/script.js"></script>
+    <script>
+      async function fn() {
+        const requestOptions = {
+          method: "GET",
+          redirect: "follow",
+        };
+
+        const fet = await fetch(
+          "https://www.gazzetta.it/dynamic-feed/rss/section/last.xml",
+          requestOptions
+        );
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(await fet.text(), "text/xml");
+
+        // di ogni news faccio localStorage.setItem("dataora-titolo", "body xml");
+
+        // prendo tutte le chiavi dal localStorage e le metto in un array e le stampo, se riesco, ordinate per data e ora
+        const title = xml.querySelector("channel > title").textContent;
+        document.getElementById("titolo").innerHTML = `${title}`;
+
+        const link = xml.querySelector("channel > link").getAttribute("href");
+        document.getElementById(
+          "url"
+        ).innerHTML = `<a href="${link}" target="blank">RSS Link</a>`;
+
+        const description = xml.querySelector(
+          "channel > description"
+        ).textContent;
+        document.getElementById("description").innerHTML = `${description}`;
+
+        const itemsArray = Array.from(xml.querySelectorAll("channel > item"));
+
+        let checkArray = [];
+
+        itemsArray.forEach((element) => {
+          const title = element.querySelector("title").textContent;
+          const link = element.querySelector("link").textContent;
+          console.log(link);
+          const description = element.querySelector("description").textContent;
+
+          const pubDate = element.querySelector("pubDate").textContent;
+          localStorage.setItem(`${pubDate}-${title}`, `${description}|${link}`);
+          checkArray.push(`${pubDate}-${title}`);
+
+          // const news = document.getElementById("news");
+          // const div = document.createElement("div");
+
+          // div.innerHTML = `<h3>${title}</h3><p>${description}</p><p>${pubDate}</p><a href="${link}" target="blank" >Link</a>`;
+          // news.appendChild(div);
+        });
+
+        let keys = Object.keys(localStorage);
+        let keysDate = [];
+        let keysTitle = [];
+        keys.forEach((element) => {
+          keysDate.push(element.split("-")[0]);
+          keysTitle.push(element.split("-")[1]);
+        })
+
+        // io voglio stampare tutto l'array keys sempre, e poi l'array itemsArray solo se non ci sono corrispondenze facendo riferimento a quello di keys
+        let values = keys.map(key => localStorage.getItem(key));
+        valuesDescription = [];
+        valuesLink = [];
+        values.forEach((element) => {
+          valuesDescription.push(element.split("|")[0]);
+          valuesLink.push(element.split("|")[1]);
+        });
+
+        console.log(valuesLink);
+
+        let finalArray = [];
+        keys.forEach((element, index) => {
+          finalArray.push({date: keysDate[index], title: keysTitle[index], value: valuesDescription[index], link: valuesLink[index]});
+        });
+
+        itemsArray.forEach((element) => {
+          let title = element.querySelector("title").textContent;
+          let pubDate = element.querySelector("pubDate").textContent;
+          let check = `${pubDate}-${title}`;
+          if (!checkArray.includes(check)) {
+            finalArray.push({date: pubDate, title: title, value: element.querySelector("description").textContent, link: element.querySelector("link").textContent});
+          }
+        });
+
+        finalArray.sort((a, b) => {
+          return new Date(b.date) - new Date(a.date);
+        });
+
+        finalArray.forEach((element) => {
+          const news = document.getElementById("news");
+          const div = document.createElement("div");
+
+          div.innerHTML = `<h3>${element.title}</h3><p>${element.value}</p><p>${element.date}</p><a href="${element.link}" target="blank" >Link</a>`;
+          news.appendChild(div);
+        });
+      }
+
+      fn();
+    </script>
+  </body>
+</html>
